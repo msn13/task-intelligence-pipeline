@@ -33,9 +33,9 @@ def extract_tasks(meeting: dict) -> dict:
         raise
 
 
-# at the bottom of anthropic_client.py temporarily
-if __name__ == "__main__":
-    from storage.sample_meetings import get_note
-
-    result = extract_tasks({"meeting_id": "meeting-001", "raw_text": get_note(0)})
-    print(result)
+# at the bottom of anthropic_client.py temporarily for testing without ui
+# if __name__ == "__main__":
+#     from storage.sample_meetings import get_note
+#
+#     result = extract_tasks({"meeting_id": "meeting-001", "raw_text": get_note(0)})
+#     print(result)
