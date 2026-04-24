@@ -1,6 +1,6 @@
 import json
 import config
-from prompts import build_extraction_prompt
+from extraction.prompts import build_extraction_prompt
 
 
 def extract_tasks(meeting: dict) -> dict:

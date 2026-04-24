@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-04-24T12:58:55.202623",
+  "meeting_id": "meeting-001",
+  "summary": "Wellness team meeting to address Mrs. Callahan's sleep issues, anxiety, and decreased appetite, with planned medication review and family outreach.",
+  "tasks": [
+    {
+      "task_id": "task-meeting-001-000",
+      "meeting_id": "meeting-001",
+      "description": "Follow up with Mrs. Callahan regarding medication review for sleep and anxiety management",
+      "owner": "Dr. Patel",
+      "due_date": "2026-05-02",
+      "priority": "high",
+      "status": "not_started",
+      "risk": "medium"
+    },
+    {
+      "task_id": "task-meeting-001-001",
+      "meeting_id": "meeting-001",
+      "description": "Contact family liaison to reach out to Mrs. Callahan's daughter regarding increased visitation",
+      "owner": null,
+      "due_date": "2026-04-25",
+      "priority": "high",
+      "status": "not_started",
+      "risk": "medium"
+    },
+    {
+      "task_id": "task-meeting-001-002",
+      "meeting_id": "meeting-001",
+      "description": "Adjust Mrs. Callahan's evening routine to support better sleep and anxiety management",
+      "owner": "Nurse Tompkins",
+      "due_date": null,
+      "priority": "medium",
+      "status": "not_started",
+      "risk": "low"
+    }
+  ]
+}

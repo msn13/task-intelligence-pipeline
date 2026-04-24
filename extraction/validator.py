@@ -1,5 +1,5 @@
 from datetime import datetime
-from schemas import PRIORITY_VALUES, STATUS_VALUES, RISK_VALUES, DEFAULTS, DATE_FORMAT
+from storage.schemas import PRIORITY_VALUES, STATUS_VALUES, RISK_VALUES, DEFAULTS, DATE_FORMAT
 
 
 def validate_and_repair(extracted: dict, meeting_id: str) -> tuple[dict, list[str]]:
