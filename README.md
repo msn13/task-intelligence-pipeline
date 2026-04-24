@@ -1,94 +1,106 @@
-# AI Meeting → Task Pipeline
-> A business AI demo that extracts structured action items from meeting notes using Claude, validates them, and surfaces them in a lightweight dashboard.
+# Task Intelligence Pipeline
+
+> An AI-powered system that extracts structured action items from wellness team meeting notes, validates them against a
+strict schema, and surfaces them in an interactive dashboard.
+
+Built as an internship interview demo targeting real business pain: action plans falling through the cracks, no
+leadership visibility, and no accountability layer in resident care workflows.
 
 ---
 
-## What It Does
+## The Problem It Solves
 
-Wellness teams currently hand-write meeting notes, action plans fall through the cracks, and leadership has no visibility into follow-through. This system:
+Wellness teams currently hand-write meeting notes, generate action plans verbally, and track follow-through manually.
+The result:
 
-1. Ingests meeting notes (via JSONPlaceholder stubs + realistic injected text)
-2. Sends them to **Claude Haiku** for structured task extraction
-3. Validates and normalizes the output against a strict schema
-4. Persists results as local JSON
-5. Displays extracted tasks in a **Streamlit** dashboard
+- Action items live in someone's notebook or memory
+- No standardized format across staff members
+- Leadership has no visibility until something goes wrong
+- Follow-through is assumed, not verified
+
+This pipeline takes a raw, messy meeting note written in plain prose and produces a structured, validated, persisted
+task record — automatically.
+
+---
+
+## Demo Flow
+
+1. Select a meeting note from the dropdown (5 realistic wellness check-in notes)
+2. Click **Extract Tasks**
+3. Claude Haiku reads the note and returns structured JSON
+4. The validator repairs any malformed fields against the schema
+5. Results are saved to `data/tasks_bundle.json`
+6. The dashboard renders a task table with owner, deadline, priority, status, and risk
 
 ---
 
 ## Architecture
 
 ```
-JSONPlaceholder API (post stubs: id, title, userId)
+ingestion/sample_meetings.py  (realistic injected meeting prose)
         │
         ▼
-sample_meetings.py  ← injects realistic wellness meeting text
+extraction/prompts.py  (builds structured extraction prompt)
         │
         ▼
-ingestion/normalizer.py  ← maps to internal meeting schema
+extraction/anthropic_client.py  (calls Claude Haiku → strips fences → parses JSON)
         │
         ▼
-extraction/anthropic_client.py  ← Claude Haiku extracts tasks as JSON
+extraction/validator.py  (repairs + validates against schemas.py)
         │
         ▼
-extraction/validator.py  ← repairs + validates against schemas.py
+storage/json_store.py  (writes tasks_bundle.json via pathlib.Path)
         │
         ▼
-storage/json_store.py  ← writes tasks_bundle.json
-        │
-        ▼
-ui/dashboard.py  ← Streamlit dashboard displays results
+ui/dashboard.py  (Streamlit — thin render layer, no business logic)
 ```
 
-> **Planned next layer:** A Go concurrent analyzer (`go_analyzer/`) that reads `tasks_bundle.json`, runs a worker pool to score and rank tasks for urgency, and writes `alerts.json` + `ranked_tasks.json`. Python calls it via `subprocess.run()` and surfaces any Go errors directly in the UI.
+Every stage is a pure Python function. `app.py` is the orchestrator — it calls them in order and owns no logic of its
+own. The UI just calls `run_pipeline()` and renders what comes back.
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Language | Python 3.9+ |
-| AI Model | Anthropic Claude Haiku |
-| UI | Streamlit |
-| Package Manager | uv |
-| Config | `.env` via `python-dotenv` |
-| Persistence | Local JSON files |
-| File Paths | `pathlib.Path` throughout |
-| External API | JSONPlaceholder (stub layer) |
+| Layer               | Technology                                           |
+|---------------------|------------------------------------------------------|
+| Language            | Python 3.14                                          |
+| AI Model            | Anthropic Claude Haiku (`claude-haiku-4-5-20251001`) |
+| UI                  | Streamlit                                            |
+| Package Manager     | uv                                                   |
+| Virtual Environment | uv-managed `.venv/`                                  |
+| Config              | `.env` via `python-dotenv`                           |
+| Persistence         | Local JSON (`pathlib.Path` throughout)               |
+| IDE                 | IntelliJ IDEA Ultimate                               |
 
 ---
 
 ## Project Structure
 
 ```
-project/
-├── .env                        ← API key (never committed)
-├── app.py                      ← pipeline orchestrator
-├── config.py                   ← loads env, defines all Path constants
-│
-├── ingestion/
-│   ├── api_client.py           ← fetches post stubs from JSONPlaceholder
-│   ├── normalizer.py           ← maps raw post → internal meeting schema
-│   └── sample_meetings.py      ← realistic meeting note strings + get_note()
+task-intelligence-pipeline/
+├── .env                          ← API key (never committed)
+├── app.py                        ← pipeline orchestrator
+├── config.py                     ← loads env, single Anthropic client, all Path constants
 │
 ├── extraction/
-│   ├── anthropic_client.py     ← calls Claude, parses JSON response
-│   ├── prompts.py              ← builds structured extraction prompt
-│   └── validator.py            ← repairs + validates model output
+│   ├── __init__.py
+│   ├── anthropic_client.py       ← calls Claude, strips markdown fences, parses JSON
+│   ├── prompts.py                ← builds extraction prompt from meeting text
+│   └── validator.py              ← repairs + validates model output
 │
 ├── storage/
-│   ├── json_store.py           ← save_json / load_json utilities
-│   └── schemas.py              ← single source of truth: field names, enums, defaults
+│   ├── __init__.py
+│   ├── json_store.py             ← save_json / load_json utilities
+│   └── schemas.py                ← single source of truth: enums, required fields, defaults
 │
 ├── ui/
-│   └── dashboard.py            ← Streamlit UI (thin — no business logic)
+│   └── dashboard.py              ← Streamlit dashboard
 │
-├── data/
-│   ├── tasks_bundle.json       ← Python output, Go input
-│   └── sample_output/          ← saved good run for demo fallback
-│
-└── go_analyzer/                ← (planned) concurrent task analyzer
-    └── main.go
+└── data/
+    ├── tasks_bundle.json         ← pipeline output
+    └── sample_output/
+        └── tasks_bundle.json     ← saved good run for demo fallback
 ```
 
 ---
@@ -100,78 +112,88 @@ project/
 ```bash
 # 1. Clone the repo
 git clone <repo-url>
-cd project
+cd task-intelligence-pipeline
 
-# 2. Activate virtual environment
-.venv\Scripts\activate        # Windows
-# source .venv/bin/activate   # macOS/Linux
+# 2. Activate virtual environment (Windows)
+.venv\Scripts\activate
 
 # 3. Install dependencies
-uv add anthropic streamlit python-dotenv requests
+uv add anthropic streamlit python-dotenv requests pandas
 
-# 4. Add your API key
-# Create a .env file:
-ANTHROPIC_API_KEY=your_key_here
+# 4. Create .env file at project root
+echo ANTHROPIC_API_KEY=your_key_here > .env
 
-# 5. Verify imports
-python -c "import anthropic, streamlit, dotenv, requests"
+# 5. Verify
+python -c "import anthropic, streamlit, dotenv, requests, pandas; print('OK')"
 ```
 
 ---
 
 ## Running the App
 
-**Pipeline only (no UI):**
+**Pipeline only (terminal output, no UI):**
+
 ```bash
 python app.py
 ```
-Outputs `data/tasks_bundle.json` — open it to inspect extracted tasks.
+
+Inspect `data/tasks_bundle.json` to verify extraction quality.
 
 **Full dashboard:**
+
 ```bash
 streamlit run ui/dashboard.py
 ```
 
-**Demo fallback** (no API call needed):
-Toggle "Use saved demo data" in the UI to load from `data/sample_output/`.
+**Demo fallback** (if API is unavailable):
+Check "Use saved demo data" in the sidebar — loads from `data/sample_output/tasks_bundle.json` with no API call.
 
 ---
 
 ## Key Design Decisions
 
-**Why inject sample text into JSONPlaceholder?**
-JSONPlaceholder bodies are lorem ipsum. Claude would produce meaningless output from them. We use JSONPlaceholder for real HTTP integration (proving API client code), but replace the body with realistic meeting notes before any downstream processing touches it. The pipeline is trivially upgradeable to a real meeting source.
-
 **Why `schemas.py` as a single source of truth?**
-The extraction prompt, validator, and (eventually) Go structs all need to agree on field names, enum values, and date formats. Defining them once and importing everywhere prevents silent drift — the most common integration bug in multi-stage pipelines.
+The extraction prompt, the validator, and eventually Go structs all need to agree on field names, enum values, and date
+formats. Defining them once and importing everywhere prevents silent drift — the most common integration bug in
+multi-stage pipelines.
 
-**Why is Streamlit kept thin?**
-Streamlit reruns the entire script on every interaction. Business logic inside the UI file creates hard-to-debug state bugs. All pipeline functions live in plain Python modules; Streamlit only calls them and renders results.
+**Why strip markdown fences from Claude's response?**
+Even with an explicit prompt instruction to return only JSON, Claude occasionally wraps the response in ` ```json ``` `
+fences. The client strips them with regex before parsing so the validator always receives clean input regardless of
+model behavior variance.
+
+**Why is the Streamlit layer kept thin?**
+Streamlit reruns the entire script on every user interaction. Business logic inside the UI creates hard-to-debug state
+bugs. All pipeline logic lives in plain Python modules — Streamlit only calls `run_pipeline()` and renders what it
+returns.
 
 **Why `pathlib.Path` instead of string paths?**
-String paths with backslashes are fragile on Windows. `pathlib.Path` constructs OS-correct paths automatically and makes all file locations centrally defined in `config.py`.
+String paths with backslashes break silently on different OS configurations. `pathlib.Path` constructs OS-correct paths
+automatically and keeps all file locations centrally defined in `config.py` — nothing is hardcoded anywhere else.
 
-**Why a Go worker pool for the analyzer (planned)?**
-Not for performance at demo scale — the dataset is small. The worker pool demonstrates bounded concurrency and correct channel-based data flow: the pattern that is safe and correct at scale. Go is also a natural fit for a compiled, statically-typed analyzer that produces deterministic scoring output.
+**Why one `config.client` instead of instantiating Anthropic per call?**
+The client holds the API key and connection pool. Instantiating it once at import time and sharing it across modules
+avoids repeated key loading, is easier to mock in tests, and mirrors how production SDK usage is structured.
 
 ---
 
 ## Schema Contract
 
-All tasks written to `tasks_bundle.json` conform to this structure:
+All output written to `tasks_bundle.json` conforms to this structure:
 
 ```json
 {
   "schema_version": "1.0",
-  "generated_at": "2026-04-23T12:00:00",
-  "mode": "single",
+  "generated_at": "2026-04-24T12:00:00",
+  "meeting_id": "meeting-001",
+  "summary": "One sentence summary of the meeting.",
   "tasks": [
     {
       "task_id": "task-meeting-001-000",
       "meeting_id": "meeting-001",
-      "description": "Schedule follow-up appointment for resident",
-      "owner": "Dr. Rivera",
-      "due_date": "2026-04-30",
+      "description": "Schedule follow-up appointment for resident Callahan",
+      "owner": "Dr. Patel",
+      "due_date": "2026-05-02",
       "priority": "high",
       "status": "not_started",
       "risk": "medium"
@@ -180,19 +202,68 @@ All tasks written to `tasks_bundle.json` conform to this structure:
 }
 ```
 
-Field rules enforced by `validator.py`:
-- `priority`: `low | medium | high`
-- `status`: `not_started | in_progress | completed | blocked`
-- `risk`: `low | medium | high | unknown`
-- `due_date`: `YYYY-MM-DD` or `null`
-- `owner`: string or `null`
+Field rules enforced by `validator.py`, sourced from `schemas.py`:
+
+| Field      | Allowed Values                                       |
+|------------|------------------------------------------------------|
+| `priority` | `low`, `medium`, `high`                              |
+| `status`   | `not_started`, `in_progress`, `completed`, `blocked` |
+| `risk`     | `low`, `medium`, `high`, `unknown`                   |
+| `due_date` | `YYYY-MM-DD` or `null`                               |
+| `owner`    | name string or `null`                                |
+
+Any value outside these constraints is repaired to the schema default and logged as a warning. The pipeline never
+crashes on bad model output.
 
 ---
 
-## What's Next
+## Sample Meeting Notes
 
-- **Go concurrent analyzer** — worker pool scoring urgency and generating `alerts.json`
-- **Real meeting source** — replace JSONPlaceholder with a Smartsheet or Google Forms integration
-- **Role-based alerts** — notify leadership only when tasks are overdue by a defined threshold
-- **Database persistence** — replace local JSON with PostgreSQL for multi-user support
-- **Audit log** — append-only trail of all pipeline runs and extracted tasks
+The five injected meeting notes are intentionally messy — each tests a different extraction challenge:
+
+| Note              | Challenge                                                                                                 |
+|-------------------|-----------------------------------------------------------------------------------------------------------|
+| Mrs. Callahan     | Action item buried at end, owner is ambiguous ("me"), soft deadline                                       |
+| Mr. Okafor        | Multiple owners, hedged timeframe ("if her schedule allows"), one unowned item                            |
+| Resident Flores   | Informal tone, urgency implied not stated, one item with no owner                                         |
+| Resident Thompson | One task explicitly unassigned, deadline implied by escalation logic                                      |
+| Mrs. Delacroix    | Emotional context dominates, action items feel like afterthoughts, prescription urgency in final sentence |
+
+The variation is intentional — a system that only works on clean, well-formatted input isn't solving a real problem.
+
+---
+
+## Where This Goes Next
+
+The demo pipeline proves the core concept. The full system extends it in three directions:
+
+### 1. Go Concurrent Analyzer
+
+A compiled Go binary (`go_analyzer/main.go`) that Python invokes via `subprocess.run()`. It reads `tasks_bundle.json`,
+spins up a worker pool using goroutines and channels, and scores each task for urgency based on due date proximity,
+priority, and risk level. Output: `alerts.json` (flagged high-risk tasks) and `ranked_tasks.json` (all tasks sorted by
+urgency score).
+
+Go is the right tool here not for performance at demo scale — the dataset is small — but because a worker pool with
+bounded concurrency is the *correct pattern* for this kind of batch analysis at production scale. Python's GIL makes
+true parallelism awkward for CPU-bound scoring; Go goroutines are cheap, and the channel-based data flow is explicit and
+safe. The `tasks_bundle.json` file is the shared contract between the two runtimes — Python writes it, Go reads it,
+neither needs to know how the other works internally.
+
+### 2. Real Data Integration
+
+Replace JSONPlaceholder stubs with a live Smartsheet or Google Forms integration. The ingestion layer is already
+isolated behind `sample_meetings.py` — swapping the data source means changing one module, not touching the extraction
+or validation pipeline.
+
+### 3. Accountability and Alerting Layer
+
+The core business requirement that motivated this project: leadership needs to know when action plans aren't followed
+through. Completing this means:
+
+- Storing task state across time — requires moving from local JSON to a real database (PostgreSQL or SQLite)
+- A scheduled job that checks task status against due dates
+- A notification layer (email or Slack webhook) that fires when tasks are overdue by a defined threshold
+- A role-based view so senior leadership sees only flagged items without needing to understand the full pipeline
+
+This is where the project stops being a demo and becomes a production system.
