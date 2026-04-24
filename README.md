@@ -109,21 +109,24 @@ task-intelligence-pipeline/
 
 **Prerequisites:** Python 3.9+, [uv](https://github.com/astral-sh/uv)
 
-```bash
-# 1. Clone the repo
+```powershell
+# 1. Install uv (Windows)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# 2. Clone the repo
 git clone <repo-url>
 cd task-intelligence-pipeline
 
-# 2. Activate virtual environment (Windows)
+# 3. Activate virtual environment (Windows)
 .venv\Scripts\activate
 
-# 3. Install dependencies
+# 4. Install dependencies
 uv add anthropic streamlit python-dotenv requests pandas
 
-# 4. Create .env file at project root
+# 5. Create .env file at project root
 echo ANTHROPIC_API_KEY=your_key_here > .env
 
-# 5. Verify
+# 6. Verify
 python -c "import anthropic, streamlit, dotenv, requests, pandas; print('OK')"
 ```
 
